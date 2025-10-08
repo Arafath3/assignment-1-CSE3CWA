@@ -4,21 +4,17 @@
 import { useEffect, useState } from "react";
 import { copyToClipboard, downloadAsHtml } from "@/lib/utils";
 
-type Props = {
-  html: string;
-  filename?: string;
-};
+type Props = { html: string; filename?: string };
 
 export default function PlayGroundPrev({
   html,
   filename = "horizontal-scroll.html",
 }: Props) {
-  const [showCode, setShowCode] = useState<boolean>(false);
+  const [showCode, setShowCode] = useState(false);
 
-  // remember last view
   useEffect(() => {
-    const saved = localStorage.getItem("pg:view");
-    if (saved) setShowCode(saved === "code");
+    const v = localStorage.getItem("pg:view");
+    if (v) setShowCode(v === "code");
   }, []);
   useEffect(() => {
     localStorage.setItem("pg:view", showCode ? "code" : "preview");
@@ -27,10 +23,10 @@ export default function PlayGroundPrev({
   return (
     <div
       className="relative rounded-xl border border-border bg-card"
-      style={{ height: 460 }} // single fixed box height; tweak if you want
+      style={{ minHeight: 620, height: "64vh", maxHeight: 820 }}
     >
-      {/* Toolbar (top-right) */}
-      <div className="absolute right-2 top-2 flex gap-2">
+      {/* toolbar */}
+      <div className="absolute right-2 top-2 flex gap-2 z-10">
         <button
           className="rounded-md border border-border bg-secondary px-3 py-1 text-sm text-secondary-foreground"
           onClick={() => setShowCode((v) => !v)}
@@ -41,7 +37,7 @@ export default function PlayGroundPrev({
           {showCode ? "Preview" : "Code"}
         </button>
 
-        {showCode ? (
+        {showCode && (
           <>
             <button
               className="rounded-md border border-border bg-primary px-3 py-1 text-sm text-primary-foreground"
@@ -49,22 +45,20 @@ export default function PlayGroundPrev({
                 await copyToClipboard(html);
                 alert("Copied!");
               }}
-              aria-label="Copy code"
             >
               Copy
             </button>
             <button
               className="rounded-md border border-border bg-card px-3 py-1 text-sm"
               onClick={() => downloadAsHtml(filename, html)}
-              aria-label="Download HTML file"
             >
               Download
             </button>
           </>
-        ) : null}
+        )}
       </div>
 
-      {/* Content area */}
+      {/* content */}
       <div className="h-full w-full overflow-hidden rounded-xl">
         {showCode ? (
           <textarea
@@ -78,16 +72,15 @@ export default function PlayGroundPrev({
           <iframe
             title="Preview"
             srcDoc={html}
-            className="h-full w-full rounded-xl bg-background"
+            className="block h-full w-full rounded-xl border-0 bg-background"
           />
         )}
       </div>
 
-      {/* Footer hint (bottom-left) */}
       <div className="pointer-events-none absolute bottom-2 left-3 text-xs text-muted-foreground">
         {showCode
-          ? "Viewing code • Copy / Download on the right"
-          : "Viewing preview • Click ‘Code’ to see HTML"}
+          ? "code • Copy/Download →"
+          : "preview • Click ‘Code’ to see HTML"}
       </div>
     </div>
   );

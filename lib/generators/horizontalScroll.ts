@@ -1,5 +1,11 @@
 // lib/generators/horizontalScroll.ts
-export type HSCard = { title: string; body?: string };
+export type HSCard = {
+  title: string;
+  body?: string;
+  imgSrc?: string; // data URL or http(s) URL
+  imgAlt?: string;
+  imgFit?: "cover" | "contain";
+};
 
 export type HSOptions = {
   pageTitle?: string;
@@ -21,42 +27,63 @@ export function buildHorizontalScrollHTML(opts: HSOptions = {}) {
     bg = "#0b0f19",
     fg = "#eaeef7",
     accent = "#7c9cff",
-    width = 520,
-    height = 380,
-    gap = 24,
-    radius = 28,
+    width = 600,
+    height = 420,
+    gap = 28,
+    radius = 32,
     border = "rgba(255,255,255,0.35)",
   } = opts;
 
+  const scheme = isDark(bg) ? "dark" : "light";
+
   const cardHtml = cards
-    .map(
-      (c, i) => `
-    <section role="group" aria-label="Card ${i + 1}"
-      style="scroll-snap-align:center; min-width:${width}px; height:${height}px;
-             display:flex; flex-direction:column; align-items:center; justify-content:center;
-             border:1px solid ${border}; border-radius:${radius}px; margin-right:${gap}px; color:${fg};">
-      <div style="font-size:28px; font-weight:600; margin-bottom:8px;">${esc(
-        c.title
-      )}</div>
-      ${
-        c.body
-          ? `<p style="margin:0; padding:0 16px; text-align:center; line-height:1.5; opacity:.9;">${esc(
-              c.body
-            )}</p>`
-          : ""
-      }
-    </section>
-  `
-    )
+    .map((c, i) => {
+      const withImg = !!c.imgSrc;
+      // card inner: optional full-bleed image + centered title overlay
+      const inner = withImg
+        ? `
+        <img src="${escAttr(c.imgSrc!)}" alt="${escAttr(c.imgAlt || c.title)}"
+             style="position:absolute; inset:0; width:100%; height:100%;
+                    object-fit:${
+                      c.imgFit || "cover"
+                    }; border-radius:${radius}px;" />
+        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+          <div style="color:${fg}; font-size:28px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,.6);">${esc(
+            c.title
+          )}</div>
+        </div>`
+        : `
+        <div style="font-size:28px; font-weight:600; margin-bottom:8px;">${esc(
+          c.title
+        )}</div>
+        ${
+          c.body
+            ? `<p style="margin:0; padding:0 16px; text-align:center; line-height:1.5; opacity:.9;">${esc(
+                c.body
+              )}</p>`
+            : ""
+        }`;
+
+      return `
+      <section role="group" aria-label="Card ${i + 1}"
+        style="scroll-snap-align:center; min-width:${width}px; height:${height}px;
+               position:relative; overflow:hidden;
+               display:flex; flex-direction:column; align-items:center; justify-content:center;
+               border:1px solid ${border}; border-radius:${radius}px; margin-right:${gap}px; color:${fg};">
+        ${inner}
+      </section>
+    `;
+    })
     .join("");
 
   const step = width + gap;
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<title>${esc(
-    pageTitle
-  )}</title><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
-<body style="margin:0; background:${bg}; color:${fg}; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;">
+<title>${esc(pageTitle)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+</head>
+<body style="margin:0; background:${bg}; color:${fg}; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; color-scheme:${scheme};">
 <header style="padding:16px;"><h1 style="margin:0; font-size:22px;">${esc(
     pageTitle
   )}</h1></header>
@@ -64,7 +91,7 @@ export function buildHorizontalScrollHTML(opts: HSOptions = {}) {
   <div id="frame" role="region" aria-label="Horizontal Scroll"
        style="overflow:auto; padding:${gap}px; border:2px solid ${border}; border-radius:${
     radius + 12
-  }px; scroll-behavior:smooth;"
+  }px; scroll-behavior:smooth; color-scheme:${scheme};"
        tabindex="0">
     <div style="display:flex; align-items:stretch; scroll-snap-type:x mandatory;">${cardHtml}</div>
   </div>
@@ -93,4 +120,16 @@ function esc(s: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+function escAttr(s: string) {
+  return esc(s).replaceAll("\n", "");
+}
+function isDark(hex: string) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "");
+  if (!m) return true;
+  const r = parseInt(m[1], 16),
+    g = parseInt(m[2], 16),
+    b = parseInt(m[3], 16);
+  const L = 0.2126 * (r / 255) + 0.7152 * (g / 255) + 0.0722 * (b / 255);
+  return L < 0.5;
 }
