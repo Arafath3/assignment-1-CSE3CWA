@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"           
+  url      = env("DATABASE_URL") 
+}
+
+model Scenario {
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String
+  sessionDurationSec Int
+  task            String
+  customRules     Json?
+  penalties       Json?
+  code            String   @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  status         String   @default("active")
+  scenarioCode   String?  
+  startAt        DateTime? 
+  elapsedSec     Int       @default(0)
+  work           String    @default("")
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  snapshots  Snapshot[]
+  snippets   Snippet[]  @relation("SessionSnippets")
+}
+
+model Snapshot {
+  id         String   @id @default(cuid())
+  sessionId  String
+  data       Json
+  createdAt  DateTime @default(now())
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Snippet {
+  id              String   @id @default(cuid())
+  shareId         String   @unique
+  title           String?
+  code            String
+  visibility      SnippetVisibility @default(PUBLIC)
+  ownerSessionId  String?
+  ownerSession    Session? @relation("SessionSnippets", fields: [ownerSessionId], references: [id])
+  createdAt       DateTime @default(now())
+}
+
+enum SnippetVisibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+

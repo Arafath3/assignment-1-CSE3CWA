@@ -65,7 +65,7 @@ export default function CardEditor({ cards, setCards }: Props) {
               />
               {c.imgSrc && (
                 <button
-                  className="px-3 py-2 rounded border border-border"
+                  className="px-3 py-2 border border-border rounded-3xl"
                   onClick={() => update(i, { imgSrc: undefined })}
                 >
                   Clear

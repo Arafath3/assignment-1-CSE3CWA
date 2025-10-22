@@ -1,6 +1,6 @@
-// app/layout.tsx
 import "./globals.css";
 import NavBar from "@/components/NavBar/NavBar";
+import ScrollPersist from "@/components/ScrollPersist/ScrollPersist";
 import { ThemeProvider } from "@/components/ThemeProvider/ThemeProvider";
 import { Libertinus_Sans } from "next/font/google";
 
@@ -19,14 +19,14 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={libertinus.className}>
         <ThemeProvider
-          attribute="class" // <-- REQUIRED for Tailwind dark mode
+          attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          {/* Give the whole app a theme-aware surface */}
           <div className="min-h-screen bg-background text-foreground">
             <NavBar />
+            <ScrollPersist />
             {children}
           </div>
         </ThemeProvider>

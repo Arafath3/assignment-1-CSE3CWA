@@ -1,8 +1,7 @@
-// lib/generators/horizontalScroll.ts
 export type HSCard = {
   title: string;
   body?: string;
-  imgSrc?: string; // data URL or http(s) URL
+  imgSrc?: string;
   imgAlt?: string;
   imgFit?: "cover" | "contain";
 };
@@ -17,7 +16,9 @@ export type HSOptions = {
   height?: number;
   gap?: number;
   radius?: number;
-  border?: string;
+
+  frameBorder?: string;
+  cardBorder?: string;
 };
 
 export function buildHorizontalScrollHTML(opts: HSOptions = {}) {
@@ -31,7 +32,10 @@ export function buildHorizontalScrollHTML(opts: HSOptions = {}) {
     height = 420,
     gap = 28,
     radius = 32,
-    border = "rgba(255,255,255,0.35)",
+
+    // defaults: no frame border, show subtle card border
+    frameBorder = "none",
+    cardBorder = "rgba(255,255,255,0.35)",
   } = opts;
 
   const scheme = isDark(bg) ? "dark" : "light";
@@ -39,7 +43,12 @@ export function buildHorizontalScrollHTML(opts: HSOptions = {}) {
   const cardHtml = cards
     .map((c, i) => {
       const withImg = !!c.imgSrc;
-      // card inner: optional full-bleed image + centered title overlay
+
+      // If there's an image: DON'T show the numeric title overlay.
+      // If user typed a non-numeric title, you may still want to show it—flip `showTitle` accordingly.
+      const isNumericTitle = /^\d+$/.test(c.title.trim());
+      const showTitle = withImg ? !isNumericTitle : true;
+
       const inner = withImg
         ? `
         <img src="${escAttr(c.imgSrc!)}" alt="${escAttr(c.imgAlt || c.title)}"
@@ -47,11 +56,15 @@ export function buildHorizontalScrollHTML(opts: HSOptions = {}) {
                     object-fit:${
                       c.imgFit || "cover"
                     }; border-radius:${radius}px;" />
-        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
-          <div style="color:${fg}; font-size:28px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,.6);">${esc(
-            c.title
-          )}</div>
-        </div>`
+        ${
+          showTitle
+            ? `<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+                 <div style="color:${fg}; font-size:28px; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,.6);">
+                   ${esc(c.title)}
+                 </div>
+               </div>`
+            : ``
+        }`
         : `
         <div style="font-size:28px; font-weight:600; margin-bottom:8px;">${esc(
           c.title
@@ -69,10 +82,12 @@ export function buildHorizontalScrollHTML(opts: HSOptions = {}) {
         style="scroll-snap-align:center; min-width:${width}px; height:${height}px;
                position:relative; overflow:hidden;
                display:flex; flex-direction:column; align-items:center; justify-content:center;
-               border:1px solid ${border}; border-radius:${radius}px; margin-right:${gap}px; color:${fg};">
+               border:${
+                 cardBorder === "none" ? "none" : "1px solid " + cardBorder
+               };
+               border-radius:${radius}px; margin-right:${gap}px; color:${fg};">
         ${inner}
-      </section>
-    `;
+      </section>`;
     })
     .join("");
 
@@ -89,9 +104,13 @@ export function buildHorizontalScrollHTML(opts: HSOptions = {}) {
   )}</h1></header>
 <main style="padding:24px; max-width:1200px; margin:0 auto;">
   <div id="frame" role="region" aria-label="Horizontal Scroll"
-       style="overflow:auto; padding:${gap}px; border:2px solid ${border}; border-radius:${
-    radius + 12
-  }px; scroll-behavior:smooth; color-scheme:${scheme};"
+       style="overflow:auto; padding:${gap}px;
+              border:${
+                frameBorder === "none" ? "none" : "2px solid " + frameBorder
+              };
+              border-radius:${
+                radius + 12
+              }px; scroll-behavior:smooth; color-scheme:${scheme};"
        tabindex="0">
     <div style="display:flex; align-items:stretch; scroll-snap-type:x mandatory;">${cardHtml}</div>
   </div>

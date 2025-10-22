@@ -1,4 +1,3 @@
-// components/PlayGround/PlayGroundControl.tsx
 "use client";
 
 type Props = {
