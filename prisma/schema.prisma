@@ -8,17 +8,24 @@ datasource db {
 }
 
 model Scenario {
-  id              Int      @id @default(autoincrement())
-  name            String
-  description     String
+  id                 Int       @id @default(autoincrement())
+  name               String
+  description        String
   sessionDurationSec Int
-  task            String
-  customRules     Json?
-  penalties       Json?
-  code            String   @unique
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  task               String
+
+  // NEW:
+  rulesText          String?   // teacher DSL
+  ambient            Json?     // { messages: string[] }
+
+  customRules        Json?
+  penalties          Json?
+  code               String    @unique
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
+
+
 
 model Session {
   id             String   @id @default(cuid())

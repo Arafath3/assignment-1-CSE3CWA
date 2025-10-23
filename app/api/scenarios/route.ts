@@ -1,78 +1,82 @@
 // app/api/scenarios/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
-function alphaCode(len = 6) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+function genCode(len = 7) {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i = 0; i < len; i++)
-    out += chars[Math.floor(Math.random() * chars.length)];
+    out += alphabet[Math.floor(Math.random() * alphabet.length)];
   return out;
 }
 
-async function uniqueAlphaCode() {
-  // loop until unique
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const code = alphaCode(6);
-    const exists = await prisma.scenario.findUnique({ where: { code } });
-    if (!exists) return code;
-  }
+function normalizeAmbient(...candidates: unknown[]): string[] {
+  const toList = (v: any): string[] => {
+    if (Array.isArray(v))
+      return v
+        .map(String)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    if (typeof v === "string")
+      return v
+        .split(/\r?\n|,/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    if (v && typeof v === "object")
+      return toList(v.messages ?? v.ambientMessages ?? v.msgs ?? v.ambient);
+    return [];
+  };
+  const merged = candidates.flatMap(toList);
+  return Array.from(new Set(merged));
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const {
-      name, // string
-      description, // string
-      sessionDurationSec, // number (seconds)
-      task, // string (code / quiz / anything)
-      rulesText, // string (from your "Rules" textarea)
-      ambientMessages, // string (from your "Ambient messages" textarea)
-    } = body ?? {};
+    const body = await req.json().catch(() => ({}));
 
-    if (!name || !description || !task) {
-      return NextResponse.json(
-        { error: "Missing required fields." },
-        { status: 400 }
-      );
-    }
+    const ambientArr = normalizeAmbient(
+      body?.customRules?.ambientMessages,
+      body?.ambient?.messages,
+      body?.ambientMessages // legacy
+    );
 
-    const dur = Number(sessionDurationSec ?? 0);
-    if (!Number.isFinite(dur) || dur < 60) {
-      return NextResponse.json(
-        { error: "sessionDurationSec must be >= 60 seconds." },
-        { status: 400 }
-      );
-    }
+    // IMPORTANT: use undefined (not null) when empty; type as InputJsonValue when present
+    const ambientJson: Prisma.InputJsonValue | undefined = ambientArr.length
+      ? ({ messages: ambientArr } as Prisma.InputJsonValue)
+      : undefined;
 
-    const code = await uniqueAlphaCode();
+    const customRulesJson: Prisma.InputJsonValue | undefined = ambientArr.length
+      ? ({ ambientMessages: ambientArr } as Prisma.InputJsonValue)
+      : undefined;
 
-    const scenario = await prisma.scenario.create({
+    const penaltiesJson: Prisma.InputJsonValue | undefined =
+      body?.penalties !== undefined
+        ? (body.penalties as Prisma.InputJsonValue)
+        : undefined;
+
+    const created = await prisma.scenario.create({
       data: {
-        name,
-        description,
-        sessionDurationSec: dur,
-        task,
-        // pack free-text into Json columns so you didn’t need to change schema
-        customRules: {
-          rulesText: String(rulesText ?? ""),
-          ambientMessages: String(ambientMessages ?? ""),
-        },
-        penalties: "",
-        code,
+        code: genCode(7),
+        name: String(body.name),
+        description: String(body.description),
+        sessionDurationSec: Number(body.sessionDurationSec) || 600,
+        task: String(body.task),
+        // Add this column in Prisma schema: rulesText String?
+        rulesText:
+          typeof body.rulesText === "string" ? body.rulesText : undefined,
+        // Add this column in Prisma schema: ambient Json?
+        ambient: ambientJson,
+        customRules: customRulesJson,
+        penalties: penaltiesJson,
       },
+      select: { code: true },
     });
 
+    return NextResponse.json({ code: created.code }, { status: 201 });
+  } catch (e: any) {
     return NextResponse.json(
-      { id: scenario.id, code: scenario.code },
-      { status: 201 }
-    );
-  } catch (err) {
-    console.error("Create scenario error:", err);
-    return NextResponse.json(
-      { error: "Failed to create scenario" },
+      { error: "Internal error: " + String(e?.message || e) },
       { status: 500 }
     );
   }
