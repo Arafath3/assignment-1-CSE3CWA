@@ -2,6 +2,7 @@ import "./globals.css";
 import NavBar from "@/components/NavBar/NavBar";
 import ScrollPersist from "@/components/ScrollPersist/ScrollPersist";
 import { ThemeProvider } from "@/components/ThemeProvider/ThemeProvider";
+import Footer from "@/components/Footer/Footer"; // <- add
 import { Libertinus_Sans } from "next/font/google";
 
 const libertinus = Libertinus_Sans({
@@ -24,10 +25,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen bg-background text-foreground">
+          {/* make the shell a flex column so the footer sits at the bottom */}
+          <div className="min-h-screen flex flex-col bg-background text-foreground">
             <NavBar />
             <ScrollPersist />
-            {children}
+            <main className="flex-1">{children}</main>{" "}
+            {/* <- grows to push footer down */}
+            <Footer name="Arafath" studentId="22035298" />{" "}
+            {/* <- set your real name */}
           </div>
         </ThemeProvider>
       </body>
