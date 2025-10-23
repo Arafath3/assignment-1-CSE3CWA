@@ -1,19 +1,22 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+// app/api/snippets/[shareId]/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getPrisma } from "@/lib/prisma";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { shareId: string } }
-) {
+type Params = { shareId: string };
+
+export async function GET(_req: NextRequest, ctx: { params: Promise<Params> }) {
+  const prisma = getPrisma(); // call this inside the handler/function
+
+  const { shareId } = await ctx.params; // <-- await the Promise in Next 15
+
   const s = await prisma.snippet.findUnique({
-    where: { shareId: params.shareId },
+    where: { shareId },
+    select: { title: true, code: true, visibility: true },
   });
-  if (!s || s.visibility === "PRIVATE")
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  return NextResponse.json({
-    title: s.title,
-    code: s.code,
-    visibility: s.visibility,
-  });
+  if (!s || s.visibility === "PRIVATE") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(s);
 }

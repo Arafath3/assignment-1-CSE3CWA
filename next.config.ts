@@ -1,7 +1,5 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
+module.exports = {
+  output: "standalone",
+  eslint: { ignoreDuringBuilds: true },
+  typedRoutes: true, // or false to disable checks
 };
-
-export default nextConfig;

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 const generateRandomCode = () => {
   const length = 6; // Length of the random code
@@ -15,6 +15,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const prisma = getPrisma(); // call this inside the handler/function
   if (req.method === "POST") {
     const {
       name,

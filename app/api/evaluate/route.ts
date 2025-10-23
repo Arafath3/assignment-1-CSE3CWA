@@ -1,12 +1,14 @@
 // app/api/evaluate/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
+
 import {
   evaluateRulesServer,
   type Scenario as RuleScenario, // just to align types locally
 } from "@/lib/rules";
 
 export async function POST(req: Request) {
+  const prisma = getPrisma(); // call this inside the handler/function
   try {
     const { scenarioCode, studentVisible } = await req.json();
 

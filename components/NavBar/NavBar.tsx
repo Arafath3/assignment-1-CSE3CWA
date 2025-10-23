@@ -14,9 +14,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button"; // shadcn button
+import { Button } from "@/components/ui/button";
+import type { Route } from "next"; // <-- add this
 
-// tiny cookie helpers (client-side)
+// cookie helpers…
 function setCookie(name: string, value: string, days = 30) {
   const maxAge = days * 24 * 60 * 60;
   document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(
@@ -30,32 +31,33 @@ function getCookie(name: string) {
   return m ? decodeURIComponent(m[1]) : "";
 }
 
-const NAV: { href: string; label: string }[] = [
+// Make href a typed Route (not string).
+// 'satisfies' keeps literals and validates against Route without widening to string.
+const NAV = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/escape-room", label: "Escape Room" },
   { href: "/coding-races", label: "Coding Races" },
   { href: "/court-room", label: "Court Room" },
-];
+] as const satisfies readonly { href: Route; label: string }[];
 
 export default function NavBar() {
   const pathname = usePathname();
   const [active, setActive] = React.useState(pathname || "/");
 
-  // restore last tab on first load if user lands somewhere else
   React.useEffect(() => {
     const saved = getCookie("menu.active");
     if (saved && saved !== active) setActive(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // when route changes, update both state and cookie
   React.useEffect(() => {
     if (!pathname) return;
     setActive(pathname);
     setCookie("menu.active", pathname, 30);
   }, [pathname]);
 
-  const isActive = (href: string) => active === href;
+  const isActive = (href: Route) => active === href;
 
   return (
     <header
@@ -89,7 +91,7 @@ export default function NavBar() {
                 className={isActive(item.href) ? "bg-muted" : ""}
               >
                 <Link
-                  href={item.href}
+                  href={item.href} // now typed as Route ✅
                   aria-current={isActive(item.href) ? "page" : undefined}
                 >
                   {item.label}

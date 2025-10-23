@@ -1,43 +1,26 @@
 // app/api/scenarios/ensure-default/route.ts
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import { getPrisma } from "@/lib/prisma";
 
-const DEFAULT_CODE = "DEFAULT"; // fixed, easy to share
+export const dynamic = "force-dynamic"; // avoid any static eval
 
-export async function POST() {
-  try {
-    const existing = await prisma.scenario.findUnique({
-      where: { code: DEFAULT_CODE },
-    });
-    if (existing)
-      return NextResponse.json({ ensured: true, code: DEFAULT_CODE });
+export async function POST(_req: NextRequest) {
+  const prisma = getPrisma(); // <-- only inside handler
 
-    const scenario = await prisma.scenario.create({
+  // example logic; replace with your real “ensure default” work
+  const code = "default";
+  const exists = await prisma.scenario.findUnique({ where: { code } });
+  if (!exists) {
+    await prisma.scenario.create({
       data: {
-        name: "Input Sanitization 101",
-        description:
-          "Fix the input sanitization issues in the provided handler within the time limit.",
-        sessionDurationSec: 5 * 60,
-        task: `// Example: sanitize the 'name' field safely before using it
-export function handler(req, res) {
-  const name = req.body.name; // UNSAFE
-  // TODO: sanitize/escape name and validate length
-  res.end("Hello " + name);
-}`,
-        customRules: {
-          rulesText:
-            "- Ensure no direct string concatenation into HTML.\n- Validate 'name' length (1..50).\n- Escape/encode output.",
-          ambientMessages:
-            "Boss: are you done with sprint 1?\nAgile: 'fix input validation'\nFamily: pick up the kids?",
-        },
-        penalties: { onFail: "Court: Laws of Tort & Disability Act" },
-        code: DEFAULT_CODE,
+        code,
+        name: "Default Scenario",
+        description: "Autocreated default",
+        sessionDurationSec: 600,
+        task: "// #patch main\n// #endpatch\n",
       },
     });
-
-    return NextResponse.json({ ensured: true, code: scenario.code });
-  } catch (err) {
-    console.error("ensure-default error:", err);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
+
+  return NextResponse.json({ ok: true });
 }

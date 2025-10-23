@@ -1,6 +1,7 @@
 // app/api/scenarios/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
+
 import { Prisma } from "@prisma/client";
 
 function genCode(len = 7) {
@@ -32,6 +33,7 @@ function normalizeAmbient(...candidates: unknown[]): string[] {
 }
 
 export async function POST(req: Request) {
+  const prisma = getPrisma(); // call this inside the handler/function
   try {
     const body = await req.json().catch(() => ({}));
 

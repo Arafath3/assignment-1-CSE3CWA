@@ -1,21 +1,28 @@
 // app/api/sessions/[id]/route.ts
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import { getPrisma } from "@/lib/prisma";
 
-// GET /api/sessions/:id
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+import type { Prisma, Session } from "@prisma/client";
 
-  const session = await prisma.session.findUnique({
+type Params = { id: string };
+
+function hasAnyProgress(
+  s: Pick<Session, "scenarioCode" | "elapsedSec" | "work">
+): boolean {
+  return (
+    Boolean(s.scenarioCode) || (s.work ?? "") !== "" || (s.elapsedSec ?? 0) > 0
+  );
+}
+
+export async function GET(_req: NextRequest, ctx: { params: Promise<Params> }) {
+  const prisma = getPrisma(); // call this inside the handler/function
+  const { id } = await ctx.params; // <- typed routes: await params
+
+  const s = await prisma.session.findUnique({
     where: { id },
     select: {
       id: true,
-      status: true,
       scenarioCode: true,
-      startAt: true,
       elapsedSec: true,
       work: true,
       createdAt: true,
@@ -23,44 +30,72 @@ export async function GET(
     },
   });
 
-  if (!session) {
-    return NextResponse.json({ error: "Session not found." }, { status: 404 });
-  }
-  return NextResponse.json(session);
+  if (!s) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const latest = hasAnyProgress(s)
+    ? {
+        scenarioCode: s.scenarioCode ?? null,
+        elapsedSec: s.elapsedSec ?? 0,
+        work: s.work ?? "",
+      }
+    : null;
+
+  return NextResponse.json({ id: s.id, latest });
 }
 
-// PATCH /api/sessions/:id
+type PatchBody = {
+  scenarioCode?: unknown;
+  elapsedSec?: unknown;
+  work?: unknown;
+  data?: Prisma.InputJsonValue; // for snapshot JSON
+};
+
 export async function PATCH(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  ctx: { params: Promise<Params> }
 ) {
-  const { id } = await params;
-  const body = await req.json().catch(() => ({}));
+  const prisma = getPrisma(); // call this inside the handler/function
+  const { id } = await ctx.params; // <- await params
+  const body = (await req.json().catch(() => ({}))) as PatchBody;
 
-  const data: Record<string, any> = {};
-  if (typeof body.elapsedSec === "number")
-    data.elapsedSec = Math.max(0, Math.floor(body.elapsedSec));
-  if (typeof body.work === "string") data.work = body.work;
-  if (typeof body.status === "string") data.status = body.status;
-  if (typeof body.scenarioCode === "string")
-    data.scenarioCode = body.scenarioCode;
-  if (body.startAt) data.startAt = new Date(body.startAt);
+  const updateData: Partial<
+    Pick<Session, "scenarioCode" | "elapsedSec" | "work">
+  > = {};
+  if ("scenarioCode" in body)
+    updateData.scenarioCode = String(body.scenarioCode ?? "");
+  if ("elapsedSec" in body)
+    updateData.elapsedSec = Number(body.elapsedSec ?? 0);
+  if ("work" in body) updateData.work = String(body.work ?? "");
 
-  try {
-    const updated = await prisma.session.update({
+  const doSnapshot = typeof body.data !== "undefined";
+
+  const [updated] = await prisma.$transaction([
+    prisma.session.update({
       where: { id },
-      data,
+      data: updateData,
       select: {
         id: true,
+        scenarioCode: true,
         elapsedSec: true,
         work: true,
-        scenarioCode: true,
-        status: true,
+        createdAt: true,
         updatedAt: true,
       },
-    });
-    return NextResponse.json(updated);
-  } catch {
-    return NextResponse.json({ error: "Session not found." }, { status: 404 });
-  }
+    }),
+    ...(doSnapshot
+      ? [
+          prisma.snapshot.create({
+            data: { sessionId: id, data: body.data as Prisma.InputJsonValue },
+          }),
+        ]
+      : []),
+  ]);
+
+  const latest = {
+    scenarioCode: updated.scenarioCode ?? null,
+    elapsedSec: updated.elapsedSec ?? 0,
+    work: updated.work ?? "",
+  };
+
+  return NextResponse.json({ id: updated.id, latest });
 }

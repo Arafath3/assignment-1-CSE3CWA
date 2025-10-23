@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 import { z } from "zod";
 import { customAlphabet } from "nanoid";
 
@@ -13,6 +13,8 @@ const CreateSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const prisma = getPrisma(); // call this inside the handler/function
+
   const body = await req.json().catch(() => ({}));
   const parsed = CreateSchema.safeParse(body);
   if (!parsed.success)

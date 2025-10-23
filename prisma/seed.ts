@@ -1,6 +1,6 @@
 // prisma/seed.ts
-import { prisma } from "../lib/prisma"; // or import { PrismaClient } from "@prisma/client"; new PrismaClient()
-
+import { getPrisma } from "@/lib/prisma";
+const prisma = getPrisma(); // <-- inside the handler
 async function main() {
   const code = "DEFAULT";
   const exists = await prisma.scenario.findUnique({ where: { code } });

@@ -152,6 +152,9 @@ export default function CourtRoomPage() {
       );
     } finally {
       setAddLoading(false);
+      // after PATCH scenarioCode succeeds:
+      setLatest({ scenarioCode: incomingShareId, elapsedSec: 0, work: "" });
+      setHasSave(true);
     }
   }
 

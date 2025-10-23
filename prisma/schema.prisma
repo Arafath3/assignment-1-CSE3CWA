@@ -1,11 +1,12 @@
 generator client {
   provider = "prisma-client-js"
 }
-
 datasource db {
-  provider = "postgresql"           
-  url      = env("DATABASE_URL") 
+  provider  = "postgresql"
+  url       = env("DIRECT_DATABASE_URL")  // direct postgres://...
+  directUrl = env("DIRECT_DATABASE_URL")  // (ok to duplicate)
 }
+
 
 model Scenario {
   id                 Int       @id @default(autoincrement())
